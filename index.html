@@ -142,7 +142,7 @@
                     client.subscribe(MQTT_TOPIC);
                 },
                 onFailure: () => { setTimeout(connectBroker, 5000); },
-                useSSL: true
+                useSSL: true ,
                 cleanSession: true  // <-- ADD THIS LINE! Tells Paho to ignore storage tracking
             });
         }
