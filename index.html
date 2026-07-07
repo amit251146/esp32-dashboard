@@ -119,7 +119,7 @@
                     client.subscribe(MQTT_TOPIC);
                 },
                 onFailure: () => { setTimeout(connectBroker, 5000); },
-                useSSL: false
+                useSSL: true
             });
         }
 
