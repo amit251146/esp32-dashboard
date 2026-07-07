@@ -52,9 +52,9 @@
         const statusEl = document.getElementById('status');
         
         // Target Config Profiles (Must line up completely with hardware brokers)
-        const MQTT_BROKER = "broker.hivemq.com";
-        const MQTT_PORT = 8001; 
-        const MQTT_TOPIC = "amit_bme688_secure_zone_99/data";
+const MQTT_BROKER = "test.mosquitto.org"; // Ensure this matches the ESP32
+const MQTT_PORT = 8081;                  // Port 8081 processes encrypted WSS lines for Mosquitto
+const MQTT_TOPIC = "amit_bme688_secure_zone_99/data";
 
         let dataHistory = [];
         const MAX_POINTS = 30;
