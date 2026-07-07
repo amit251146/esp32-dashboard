@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Global BME688 Telemetry Terminal</title>
+    <title>BME688 Global Telemetry Dashboard</title>
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js" type="text/javascript"></script>
@@ -11,9 +11,11 @@
 <body class="bg-slate-950 text-slate-100 font-sans min-h-screen flex flex-col justify-between">
 
     <header class="bg-slate-900 border-b border-slate-800 p-5 shadow-lg">
-        <div class="max-w-7xl mx-auto flex justify-between items-center">
+        <div class="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-4">
             <h1 class="text-xl font-bold tracking-wider text-emerald-400">📊 BME688 TELEMETRY SYSTEMS</h1>
-            <div id="status" class="bg-amber-500/10 text-amber-400 text-xs px-4 py-1.5 rounded-full border border-amber-500/20 font-mono tracking-widest animate-pulse">CONNECTING TO MQTT WORLD BUS...</div>
+            <div id="status" class="bg-amber-500/10 text-amber-400 text-xs px-4 py-1.5 rounded-full border border-amber-500/20 font-mono tracking-widest uppercase animate-pulse">
+                INITIALIZING SSL HANDSHAKE...
+            </div>
         </div>
     </header>
 
@@ -49,22 +51,23 @@
         const ctx = document.getElementById('telemetryChart').getContext('2d');
         const statusEl = document.getElementById('status');
         
+        // Target Config Profiles (Must line up completely with hardware brokers)
         const MQTT_BROKER = "broker.hivemq.com";
         const MQTT_PORT = 8001; 
         const MQTT_TOPIC = "amit_bme688_secure_zone_99/data";
 
         let dataHistory = [];
-        const MAX_POINTS = 50;
+        const MAX_POINTS = 30;
 
-        // FIXED: Multi-Y-Axis structural configuration layout
+        // Initialize multi-scale charting profiles
         const chart = new Chart(ctx, {
             type: 'line',
             data: {
                 labels: [],
                 datasets: [
-                    { label: 'Temp (°C)', borderColor: '#fbbf24', backgroundColor: 'rgba(251,191,36,0.05)', data: [], borderWidth: 2, tension: 0.3, yAxisID: 'y-temp' },
-                    { label: 'Humidity (%)', borderColor: '#22d3ee', backgroundColor: 'rgba(34,211,238,0.05)', data: [], borderWidth: 2, tension: 0.3, yAxisID: 'y-hum' },
-                    { label: 'Pressure (hPa)', borderColor: '#10b981', backgroundColor: 'transparent', data: [], borderWidth: 1.5, borderDash: [3, 3], tension: 0.1, yAxisID: 'y-pres' }
+                    { label: 'Temp (°C)', borderColor: '#fbbf24', backgroundColor: 'rgba(251,191,36,0.03)', data: [], borderWidth: 2, tension: 0.3, yAxisID: 'y-temp' },
+                    { label: 'Humidity (%)', borderColor: '#22d3ee', backgroundColor: 'rgba(34,211,238,0.03)', data: [], borderWidth: 2, tension: 0.3, yAxisID: 'y-hum' },
+                    { label: 'Pressure (hPa)', borderColor: '#10b981', backgroundColor: 'transparent', data: [], borderWidth: 1.5, borderDash: [4, 4], tension: 0.1, yAxisID: 'y-pres' }
                 ]
             },
             options: {
@@ -72,78 +75,66 @@
                 maintainAspectRatio: false,
                 interaction: { mode: 'index', intersect: false },
                 scales: {
-                    x: { grid: { color: '#1e293b' }, ticks: { color: '#64748b' } },
-                    'y-temp': { 
-                        type: 'linear', 
-                        position: 'left', 
-                        grid: { color: '#1e293b' }, 
-                        ticks: { color: '#fbbf24' },
-                        title: { display: true, text: 'Temp (°C)', color: '#fbbf24' }
-                    },
-                    'y-hum': { 
-                        type: 'linear', 
-                        position: 'right', 
-                        grid: { drawOnChartArea: false }, 
-                        ticks: { color: '#22d3ee' },
-                        title: { display: true, text: 'Humidity (%)', color: '#22d3ee' }
-                    },
-                    'y-pres': { 
-                        type: 'linear', 
-                        position: 'right', 
-                        grid: { drawOnChartArea: false }, 
-                        ticks: { color: '#10b981' },
-                        title: { display: true, text: 'Pressure (hPa)', color: '#10b981' },
-                        display: true // FIX: Activated display layout for scaling pressure metrics cleanly
-                    }
+                    x: { grid: { color: '#1e293b' }, ticks: { color: '#64748b', font: { size: 10 } } },
+                    'y-temp': { type: 'linear', position: 'left', grid: { color: '#1e293b' }, ticks: { color: '#fbbf24' } },
+                    'y-hum': { type: 'linear', position: 'right', grid: { drawOnChartArea: false }, ticks: { color: '#22d3ee' } },
+                    'y-pres': { type: 'linear', position: 'right', grid: { drawOnChartArea: false }, ticks: { color: '#10b981' }, display: true }
                 },
-                plugins: { legend: { labels: { color: '#94a3b8', font: { size: 11 } } } }
+                plugins: { legend: { labels: { color: '#94a3b8' } } }
             }
         });
 
-        const clientId = "web-client-" + Math.floor(Math.random() * 100000);
+        // Initialize Paho engine interface profiles
+        const clientId = "client-dash-uuid-" + Math.floor(Math.random() * 100000);
         const client = new Paho.MQTT.Client(MQTT_BROKER, Number(MQTT_PORT), clientId);
 
         client.onConnectionLost = (responseObj) => {
-            statusEl.innerText = "LINK LOSS - RETRYING INSTANTIATION...";
-            statusEl.className = "bg-red-500/10 text-red-400 text-xs px-4 py-1.5 rounded-full border border-red-500/20 font-mono tracking-widest";
+            statusEl.innerText = "LINK INTERRUPTED - RETRYING HANDSHAKE...";
+            statusEl.className = "bg-red-500/10 text-red-400 text-xs px-4 py-1.5 rounded-full border border-red-500/20 font-mono tracking-widest uppercase animate-pulse";
             setTimeout(connectBroker, 5000);
         };
 
         client.onMessageArrived = (message) => {
             try {
-                const data = JSON.parse(message.payloadString);
+                const parsedPayload = JSON.parse(message.payloadString);
                 
-                if (dataHistory.length >= MAX_POINTS) dataHistory.shift();
-                dataHistory.push(data);
+                // Safety check: Validate JSON structure before processing
+                if (parsedPayload.temperature === undefined || parsedPayload.humidity === undefined) return;
 
-                document.getElementById('temp-val').innerHTML = `${data.temperature.toFixed(1)} <span class="text-xl font-normal text-slate-400">°C</span>`;
-                document.getElementById('hum-val').innerHTML = `${data.humidity.toFixed(1)} <span class="text-xl font-normal text-slate-400">%</span>`;
-                document.getElementById('pres-val').innerHTML = `${data.pressure.toFixed(1)} <span class="text-xl font-normal text-slate-400">hPa</span>`;
+                if (dataHistory.length >= MAX_POINTS) {
+                    dataHistory.shift();
+                    chart.data.labels.shift();
+                }
 
+                dataHistory.push(parsedPayload);
+                
                 const timeLabel = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-                
-                // Roll the labels smoothly across the data timeframe array
-                if (chart.data.labels.length >= MAX_POINTS) chart.data.labels.shift();
                 chart.data.labels.push(timeLabel);
 
+                // Re-render UI readouts
+                document.getElementById('temp-val').innerHTML = `${parsedPayload.temperature.toFixed(2)} <span class="text-xl font-normal text-slate-500">°C</span>`;
+                document.getElementById('hum-val').innerHTML = `${parsedPayload.humidity.toFixed(2)} <span class="text-xl font-normal text-slate-500">%</span>`;
+                document.getElementById('pres-val').innerHTML = `${parsedPayload.pressure.toFixed(1)} <span class="text-xl font-normal text-slate-500">hPa</span>`;
+
+                // Update charts sequentially
                 chart.data.datasets[0].data = dataHistory.map(d => d.temperature);
                 chart.data.datasets[1].data = dataHistory.map(d => d.humidity);
                 chart.data.datasets[2].data = dataHistory.map(d => d.pressure);
                 chart.update('none');
 
-            } catch (e) { console.error("Malformed JSON frame packet drop.", e); }
+            } catch (err) { console.error("Malformed packet drop.", err); }
         };
 
         function connectBroker() {
             client.connect({
                 onSuccess: () => {
                     statusEl.innerText = "GLOBAL TELEMETRY STREAM ACTIVE";
-                    statusEl.className = "bg-emerald-500/10 text-emerald-400 text-xs px-4 py-1.5 rounded-full border border-emerald-500/20 font-mono tracking-widest animate-none";
+                    statusEl.className = "bg-emerald-500/10 text-emerald-400 text-xs px-4 py-1.5 rounded-full border border-emerald-500/20 font-mono tracking-widest uppercase animate-none";
                     client.subscribe(MQTT_TOPIC);
                 },
                 onFailure: () => { setTimeout(connectBroker, 5000); },
-                useSSL: true ,
-                cleanSession: true  // <-- ADD THIS LINE! Tells Paho to ignore storage tracking
+                useSSL: true,
+                cleanSession: true
             });
         }
 
