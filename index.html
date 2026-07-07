@@ -50,31 +50,51 @@
         const statusEl = document.getElementById('status');
         
         const MQTT_BROKER = "broker.hivemq.com";
-        const MQTT_PORT = 8001; // WebSocket gateway port for browser tracking
+        const MQTT_PORT = 8001; 
         const MQTT_TOPIC = "amit_bme688_secure_zone_99/data";
 
         let dataHistory = [];
         const MAX_POINTS = 50;
 
-        // Configuration setup for rendering multiple sensor dimensions
+        // FIXED: Multi-Y-Axis structural configuration layout
         const chart = new Chart(ctx, {
             type: 'line',
             data: {
                 labels: [],
                 datasets: [
-                    { label: 'Temperature (°C)', borderColor: '#fbbf24', backgroundColor: 'rgba(251,191,36,0.05)', data: [], borderWidth: 2, tension: 0.2, yAxisID: 'y-temp' },
-                    { label: 'Humidity (%)', borderColor: '#22d3ee', backgroundColor: 'rgba(34,211,238,0.05)', data: [], borderWidth: 2, tension: 0.2, yAxisID: 'y-hum' },
-                    { label: 'Pressure (hPa)', borderColor: '#10b981', backgroundColor: 'rgba(16,185,129,0.05)', data: [], borderWidth: 1.5, borderDash: [4, 4], tension: 0.1, yAxisID: 'y-pres' }
+                    { label: 'Temp (°C)', borderColor: '#fbbf24', backgroundColor: 'rgba(251,191,36,0.05)', data: [], borderWidth: 2, tension: 0.3, yAxisID: 'y-temp' },
+                    { label: 'Humidity (%)', borderColor: '#22d3ee', backgroundColor: 'rgba(34,211,238,0.05)', data: [], borderWidth: 2, tension: 0.3, yAxisID: 'y-hum' },
+                    { label: 'Pressure (hPa)', borderColor: '#10b981', backgroundColor: 'transparent', data: [], borderWidth: 1.5, borderDash: [3, 3], tension: 0.1, yAxisID: 'y-pres' }
                 ]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
+                interaction: { mode: 'index', intersect: false },
                 scales: {
                     x: { grid: { color: '#1e293b' }, ticks: { color: '#64748b' } },
-                    'y-temp': { type: 'linear', position: 'left', grid: { color: '#1e293b' }, ticks: { color: '#fbbf24' } },
-                    'y-hum': { type: 'linear', position: 'right', grid: { drawOnChartArea: false }, ticks: { color: '#22d3ee' } },
-                    'y-pres': { type: 'linear', position: 'right', grid: { drawOnChartArea: false }, ticks: { color: '#10b981' }, display: false } // Kept scale calculations scaling implicit
+                    'y-temp': { 
+                        type: 'linear', 
+                        position: 'left', 
+                        grid: { color: '#1e293b' }, 
+                        ticks: { color: '#fbbf24' },
+                        title: { display: true, text: 'Temp (°C)', color: '#fbbf24' }
+                    },
+                    'y-hum': { 
+                        type: 'linear', 
+                        position: 'right', 
+                        grid: { drawOnChartArea: false }, 
+                        ticks: { color: '#22d3ee' },
+                        title: { display: true, text: 'Humidity (%)', color: '#22d3ee' }
+                    },
+                    'y-pres': { 
+                        type: 'linear', 
+                        position: 'right', 
+                        grid: { drawOnChartArea: false }, 
+                        ticks: { color: '#10b981' },
+                        title: { display: true, text: 'Pressure (hPa)', color: '#10b981' },
+                        display: true // FIX: Activated display layout for scaling pressure metrics cleanly
+                    }
                 },
                 plugins: { legend: { labels: { color: '#94a3b8', font: { size: 11 } } } }
             }
@@ -102,7 +122,10 @@
 
                 const timeLabel = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
                 
-                chart.data.labels = dataHistory.map((_, i) => i === dataHistory.length - 1 ? timeLabel : '');
+                // Roll the labels smoothly across the data timeframe array
+                if (chart.data.labels.length >= MAX_POINTS) chart.data.labels.shift();
+                chart.data.labels.push(timeLabel);
+
                 chart.data.datasets[0].data = dataHistory.map(d => d.temperature);
                 chart.data.datasets[1].data = dataHistory.map(d => d.humidity);
                 chart.data.datasets[2].data = dataHistory.map(d => d.pressure);
