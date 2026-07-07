@@ -143,6 +143,7 @@
                 },
                 onFailure: () => { setTimeout(connectBroker, 5000); },
                 useSSL: true
+                cleanSession: true  // <-- ADD THIS LINE! Tells Paho to ignore storage tracking
             });
         }
 
